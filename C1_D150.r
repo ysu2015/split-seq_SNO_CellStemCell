@@ -45,4 +45,40 @@ TSNEPlot(object = wt,do.label=TRUE,pt.size=0.5,no.legend=F,do.ret=T,group.by="re
 ggsave("TSNE_res2.tiff",width=5,height=4)
 
 
+wt.res06.markers<-FindAllMarkers(wt,logfc.threshold = 0.25,test.use="wilcox", only.pos=F,min.pct=0.25,
+                                      do.print= T,return.thresh=0.05)
+length(unique(wt.res06.markers$gene)) 
+write.csv(as.data.frame(wt.res06.markers),"C1_153d_fresh.res06.markers.csv")
+
+tiff("Feature_appotosis.tiff",width=960,height=480)
+FeaturePlot(object = wt, features.plot = c("BCL2","CASP8AP2"), cols.use = c("grey", "red"), 
+    reduction.use = "tsne",nCol=2,no.axes = T,pt.size = 1,dark.theme=F)
+dev.off()
+
+### vln plot for marker genes
+tiff("Vln_1.tiff",width=960,height = 960)
+VlnPlot(object = wt, features.plot = c("VIM", "NES","PAX6"), nCol=1)
+dev.off()
+
+### assign name for clusters
+current.cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7,8,9,10,11)
+new.cluster.ids <- c("6N","4EN1","3DL","8Glia","9RGC1","10RGC2","2UL","5EN2","7IPC","NA","11Div","1LI")
+wt@ident <- plyr::mapvalues(x = wt@ident, from = current.cluster.ids, to = new.cluster.ids)
+tiff("cluster.tiff",width = 960,height = 960)
+TSNEPlot(object = wt, do.label = TRUE, pt.size = 0.5)
+dev.off()
+wt <- StashIdent(object = wt, save.name = "CellType")
+wt<-SetAllIdent(wt,id="CellType")
+##### plot DEs
+wt.marker<-read.csv("C1_153d_fresh.res06.markers.csv")
+top10 <- wt.marker %>% group_by(cluster) %>% top_n(10, avg_logFC)
+# setting slim.col.label to TRUE will print just the cluster IDS instead of
+# every cell name
+tiff("DE_20.tiff",width=1960, height = 1960)
+DoHeatmap(object = wt, genes.use = top10$gene, slim.col.label = TRUE, remove.key = FALSE)
+dev.off()
+
+## 
+
+
 
