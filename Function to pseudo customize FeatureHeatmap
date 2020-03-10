@@ -1,0 +1,87 @@
+# Function to pseudo customize FeatureHeatmap
+customize_Seurat_FeatureHeatmap <- function(p, alpha.use = 1, gradient.use = c("yellow", "red"), expression.threshold = 0, is.log1p.transformed = F) {
+  
+  # Remove cells having an expression below a certain threshold
+  if (isTRUE(is.log1p.transformed)) {
+    p$data <- p$data[p$data$expression >= expression.threshold,]
+  } else {
+    p$data <- p$data[p$data$expression >= log1p(expression.threshold),]
+  }
+  
+  # Fill points using the gene expression levels
+  p$layers[[1]]$mapping$fill <- p$layers[[1]]$mapping$colour
+  
+  # Define transparency of points
+  p$layers[[1]]$mapping$alpha <- alpha.use
+  
+  # Change fill and colour gradient values
+  p <- p + scale_colour_gradientn(colours = gradient.use, guide = F) +
+    scale_fill_gradientn(colours = gradient.use, name = expression(atop(Scaled, expression))) +
+    scale_alpha_continuous(range = alpha.use, guide = F)
+  
+  # Return plot
+  p
+}
+
+# Plot features using FeatureHeatmap, and return plot using 'do.return = T'
+# Store output in 'plot'
+plot <- FeatureHeatmap(object = crypts_hi_res, features.plot = c("Clu", "Lgr5", "Mex3a", "Yap1"), group.by = "class", sep.scale = F, pt.size = 1.5, cols.use = c("gray97", "blue"), pch.use = 1)
+
+# Remove from plot all cells having an expression level below 2 (cutoff not log1p transformed)
+# Filter is applied on log normalized data, but scaled data is plotted
+customize_Seurat_FeatureHeatmap(plot, gradient.use = c("gray97", "blue"), expression.threshold = 2)
+
+#########################################################################################################################
+#########################################################################################################################
+#########################################################################################################################
+
+# # Function to pseudo customize FeaturePlots
+customize_Seurat_FeaturePlot <- function(p, alpha.use = 1, gradient.use = c("gray", "red"),
+                                         expression.threshold = NULL, is.log1p.transformed = F) {
+  
+  #### Main function ####
+  main_function <- function(p = p, alpha.use = alpha.use, gradient.use = gradient.use,
+                            expression.threshold = expression.threshold, is.log1p.transformed = is.log1p.transformed) {
+    
+    # Remove cells having an expression below a certain threshold
+    if (!is.null(expression.threshold)) {
+      if (isTRUE(is.log1p.transformed)) {
+        p$data <- p$data[p$data$gene >= expression.threshold,]
+      } else {
+        p$data <- p$data[p$data$gene >= log1p(expression.threshold),]
+      }
+    }
+    
+    # Fill points using the gene expression levels
+    p$layers[[1]]$mapping$fill <- p$layers[[1]]$mapping$colour
+    
+    # Define transparency of points
+    p$layers[[1]]$mapping$alpha <- alpha.use
+    
+    # Change fill and colour gradient values
+    p <- p + scale_colour_gradientn(colours = gradient.use, guide = F) +
+      scale_fill_gradientn(colours = gradient.use, name = expression(atop(Expression, (log)))) +
+      scale_alpha_continuous(range = alpha.use, guide = F)
+  }
+  
+  #### Execution of main function ####
+  # Apply main function on all features
+  p <- lapply(X = p, alpha.use = alpha.use, gradient.use = gradient.use, 
+              expression.threshold = expression.threshold, is.log1p.transformed = is.log1p.transformed,
+              FUN = main_function)
+  
+  # Arrange all plots using cowplot
+  # Adapted from Seurat
+  # https://github.com/satijalab/seurat/blob/master/R/plotting.R#L1100
+  # ncol argument from Josh O'Brien
+  # https://stackoverflow.com/questions/10706753/how-do-i-arrange-a-variable-list-of-plots-using-grid-arrange
+  cowplot::plot_grid(plotlist = p, ncol = ceiling(sqrt(length(p))))
+}
+
+# Plot features using FeaturePlot, and return individual plots using 'do.return = T'
+# Store output in 'plot'
+plot <- FeaturePlot(object = object, features.plot = c("Actb", "Rps9"), cols.use = c("yellow", "red"), 
+                    pt.size = 2, pch.use = 16, no.legend = F, do.return = T)
+
+# Remove from plots all cells having an expression level below 2 (cutoff not log1p transformed)
+customize_Seurat_FeaturePlot(p = plot, expression.threshold = 2)
